@@ -2,8 +2,8 @@
 
 A full-stack monthly roster planning, deterministic scheduling, and live conflict-validation platform built for D2C customer experience (CX) and operations agencies managing multiple brands, processes, and operational pods.
 
-- **Live Application:** `[Add your deployed Vercel frontend URL here]`
-- **Backend API Health Check:** `[Add your deployed Vercel backend URL here]/api/health`
+- **Live Application:** `[https://smart-roster-manager.vercel.app]`
+- **Backend API Health Check:** `[https://smart-roster-manager-backend.vercel.app/api/health]`
 - **Demo Video (3–5 min):** `[Add your demo video link here]`
 
 ---
@@ -118,6 +118,15 @@ The database is pre-seeded via `backend/db/seed.sql` with realistic operational 
 
 ---
 
+## Engineering Focus & Key Trade-Offs
+
+### 1. Backend-First Architecture (Frontend Built with Antigravity)
+To prioritize solving the core operational scheduling problem within the assessment timeline, I designed and built the **11-table TiDB/MySQL schema, raw SQL seed dataset, deterministic 2-pass roster generator, decoupled conflict validator, and Express REST API** directly. The **React + Tailwind frontend was accelerated using Antigravity** and wired directly to my live backend endpoints (zero mock data). Rather than spending the majority of time on custom UI micro-animations, I focused on guaranteeing accurate coverage math, timezone-safe UTC date handling, manual-override protection, and live conflict re-validation.
+
+### 2. Why Authentication / Login Is Intentionally Omitted
+I intentionally left the application open without a login gate for this submission so reviewers and evaluators can immediately test all 5 roster views, trigger roster generation, edit schedules, assign temporary cover, and manage configuration rules without dealing with test credentials or sign-up friction. In a production deployment (or upon request), role-based authentication (e.g., JWT/session auth separating `Operations Manager` full access from `Pod Lead` pod-scoped access) can be added cleanly as Express middleware in front of `/api/rosters` and `/api/config`.
+
+
 ## Local Setup Instructions
 
 ### Prerequisites
@@ -126,7 +135,7 @@ The database is pre-seeded via `backend/db/seed.sql` with realistic operational 
 
 ### 1. Clone the Repository
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/AryanJadhav15/smart-roster-manager-2026
 cd smart-roster-manager
 ```
 

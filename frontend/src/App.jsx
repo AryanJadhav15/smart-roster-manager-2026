@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import Navbar from './components/Navbar';
+import Sidebar from './components/Sidebar';
+import TopHeader from './components/TopHeader';
 import KPIStrip from './components/KPIStrip';
-import RosterHeader from './components/roster/RosterHeader';
 import RosterGrid from './components/roster/RosterGrid';
 import HealthMatrix from './components/roster/HealthMatrix';
 import EmployeeDetailView from './components/roster/EmployeeDetailView';
@@ -10,21 +10,25 @@ import ConflictsDrawer from './components/roster/ConflictsDrawer';
 import EmptyRosterState from './components/roster/EmptyRosterState';
 import ConfigWorkspace from './components/config/ConfigWorkspace';
 import { ToastProvider, useToast } from './context/ToastContext';
+import { ThemeProvider } from './context/ThemeContext';
 import api from './api';
 import { Loader2, Briefcase, Tag } from 'lucide-react';
 
 function DashboardApp() {
   const { showToast } = useToast();
 
-  // Primary workspace
-  const [activeWorkspace, setActiveWorkspace] = useState('roster'); // 'roster' | 'config'
+  // Active section across entire app (1-click navigation from sidebar)
+  // Options: 'company' | 'pod' | 'brand' | 'process' | 'employee' | 'pods-employees' | 'brands-processes' | 'allocations' | 'holidays-leaves'
+  const [activeSection, setActiveSection] = useState('company');
+
+  // Mobile sidebar open state
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   // Month & Year state (Default: November 2026)
   const [year, setYear] = useState(2026);
   const [month, setMonth] = useState(11);
 
-  // Roster view state
-  const [activeView, setActiveView] = useState('company'); // 'company' | 'pod' | 'brand' | 'process' | 'employee'
+  // Contextual selectors
   const [selectedPodId, setSelectedPodId] = useState(null);
   const [selectedBrandId, setSelectedBrandId] = useState(null);
   const [selectedProcessId, setSelectedProcessId] = useState(null);
@@ -40,9 +44,12 @@ function DashboardApp() {
 
   // Drawer & Modal States
   const [conflictsDrawerOpen, setConflictsDrawerOpen] = useState(false);
+  const [drawerInitialTab, setDrawerInitialTab] = useState('ALL');
   const [editModalData, setEditModalData] = useState(null); // { employee, cell, date }
 
-  // 1. Fetch Configuration Overview (Pods, Brands, Processes, Employees, Holidays, etc.)
+  const isRosterView = ['company', 'pod', 'brand', 'process', 'employee'].includes(activeSection);
+
+  // 1. Fetch Configuration Overview
   const fetchConfig = useCallback(async () => {
     setIsLoadingConfig(true);
     try {
@@ -55,7 +62,7 @@ function DashboardApp() {
       if (data.processes?.length && !selectedProcessId) setSelectedProcessId(data.processes[0].id);
       if (data.employees?.length && !selectedEmployeeId) setSelectedEmployeeId(data.employees[0].id);
     } catch (err) {
-      showToast(err.message || 'Failed to connect to backend configuration API', 'error');
+      showToast(err.message || 'Failed to load configuration data', 'error');
     } finally {
       setIsLoadingConfig(false);
     }
@@ -63,16 +70,17 @@ function DashboardApp() {
 
   // 2. Fetch Roster View
   const fetchRoster = useCallback(async () => {
+    if (!isRosterView) return;
     setIsLoadingRoster(true);
     try {
       const params = {
         year,
         month,
-        view: activeView,
-        podId: activeView === 'pod' ? selectedPodId : undefined,
-        brandId: activeView === 'brand' ? selectedBrandId : undefined,
-        processId: activeView === 'process' ? selectedProcessId : undefined,
-        employeeId: activeView === 'employee' ? selectedEmployeeId : undefined,
+        view: activeSection,
+        podId: activeSection === 'pod' ? selectedPodId : undefined,
+        brandId: activeSection === 'brand' ? selectedBrandId : undefined,
+        processId: activeSection === 'process' ? selectedProcessId : undefined,
+        employeeId: activeSection === 'employee' ? selectedEmployeeId : undefined,
       };
 
       const res = await api.getRosterView(params);
@@ -82,7 +90,7 @@ function DashboardApp() {
     } finally {
       setIsLoadingRoster(false);
     }
-  }, [year, month, activeView, selectedPodId, selectedBrandId, selectedProcessId, selectedEmployeeId, showToast]);
+  }, [year, month, activeSection, selectedPodId, selectedBrandId, selectedProcessId, selectedEmployeeId, isRosterView, showToast]);
 
   // Load configuration on mount
   useEffect(() => {
@@ -91,8 +99,10 @@ function DashboardApp() {
 
   // Load roster whenever month/year or view/filters change
   useEffect(() => {
-    fetchRoster();
-  }, [fetchRoster]);
+    if (isRosterView) {
+      fetchRoster();
+    }
+  }, [fetchRoster, isRosterView]);
 
   // Handle Month Switch
   const handleMonthChange = (newYear, newMonth) => {
@@ -122,6 +132,7 @@ function DashboardApp() {
 
     if (newStatus === 'PUBLISHED' && !rosterData.validation?.isPublishable) {
       showToast('Cannot publish roster while CRITICAL conflicts remain unresolved.', 'error');
+      setDrawerInitialTab('CRITICAL');
       setConflictsDrawerOpen(true);
       return;
     }
@@ -157,218 +168,229 @@ function DashboardApp() {
     fetchRoster();
   };
 
-  // Selected Pod Lead (for Pod view)
+  const handleOpenConflictsWithTab = (tab) => {
+    setDrawerInitialTab(tab || 'ALL');
+    setConflictsDrawerOpen(true);
+  };
+
+  // Context objects
   const currentPod = configData?.pods?.find((p) => p.id === selectedPodId);
-  // Selected Brand (for Brand view)
   const currentBrand = configData?.brands?.find((b) => b.id === selectedBrandId);
-  // Selected Process (for Process view)
   const currentProcess = configData?.processes?.find((p) => p.id === selectedProcessId);
-  // Selected Employee (for Employee view)
-  const currentEmployee = rosterData?.employees?.find((e) => e.id === selectedEmployeeId) ||
+  const currentEmployee =
+    rosterData?.employees?.find((e) => e.id === selectedEmployeeId) ||
     configData?.employees?.find((e) => e.id === selectedEmployeeId);
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900">
-      {/* 1. App Shell Navbar */}
-      <Navbar
-        activeWorkspace={activeWorkspace}
-        setActiveWorkspace={setActiveWorkspace}
+    <div className="flex h-screen w-full overflow-hidden bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 antialiased">
+      {/* 1. Sleek Left Sidebar Navigation */}
+      <Sidebar
+        activeSection={activeSection}
+        onSelectSection={setActiveSection}
+        isMobileOpen={isMobileOpen}
+        onCloseMobile={() => setIsMobileOpen(false)}
       />
 
-      {/* 2. Workspace View Routing */}
-      {activeWorkspace === 'roster' ? (
-        <main className="flex-1 flex flex-col min-h-0">
-          {/* KPI Strip */}
-          <KPIStrip
-            rosterStatus={rosterData?.roster?.status}
-            isPublishable={rosterData?.validation?.isPublishable}
-            summary={rosterData?.validation?.summary}
-            staffCount={rosterData?.employees?.length || 0}
-            onToggleStatus={handleToggleStatus}
-            isStatusUpdating={isStatusUpdating}
-            onOpenConflictsDrawer={() => setConflictsDrawerOpen(true)}
-          />
-
-          {/* Roster Controls Header */}
-          <RosterHeader
-            year={year}
-            month={month}
-            onMonthChange={handleMonthChange}
-            activeView={activeView}
-            onViewChange={setActiveView}
-            pods={configData?.pods || []}
-            selectedPodId={selectedPodId}
-            onPodChange={setSelectedPodId}
-            brands={configData?.brands || []}
-            selectedBrandId={selectedBrandId}
-            onBrandChange={setSelectedBrandId}
-            processes={configData?.processes || []}
-            selectedProcessId={selectedProcessId}
-            onProcessChange={setSelectedProcessId}
-            employees={configData?.employees || []}
-            selectedEmployeeId={selectedEmployeeId}
-            onEmployeeChange={setSelectedEmployeeId}
-            onGenerateRoster={handleGenerateRoster}
-            isGenerating={isGenerating}
-            onToggleConflictsDrawer={() => setConflictsDrawerOpen(true)}
-            criticalConflictsCount={rosterData?.validation?.summary?.criticalCount || 0}
-            warningConflictsCount={rosterData?.validation?.summary?.warningCount || 0}
-          />
-
-          {/* Main Roster Body Area */}
-          {isLoadingRoster ? (
-            <div className="flex-1 flex flex-col items-center justify-center p-12 text-slate-500">
-              <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mb-3" />
-              <p className="text-xs font-semibold">Loading live roster data from Express API...</p>
-            </div>
-          ) : !rosterData?.exists ? (
-            /* Empty State: Roster not generated yet */
-            <EmptyRosterState
-              year={year}
-              month={month}
-              onGenerate={handleGenerateRoster}
-              isGenerating={isGenerating}
-            />
-          ) : (
-            /* Active Roster Views */
-            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-              {/* Pod View Banner Card */}
-              {activeView === 'pod' && currentPod && (
-                <div className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="w-3 h-3 rounded-full bg-indigo-600" />
-                    <div>
-                      <h2 className="text-sm font-extrabold text-slate-900">
-                        {currentPod.name}
-                      </h2>
-                      <p className="text-xs text-slate-500">
-                        Pod Lead:{' '}
-                        <strong className="text-indigo-700">
-                          {currentPod.pod_lead_name || 'Unassigned'}
-                        </strong>
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-xs font-semibold text-slate-600 bg-slate-100 px-3 py-1 rounded-md border border-slate-200">
-                    {rosterData.employees?.length || 0} Members in Pod
-                  </div>
-                </div>
-              )}
-
-              {/* Brand View Top Health Matrix */}
-              {activeView === 'brand' && (
-                <div>
-                  <div className="bg-white px-6 py-2 border-b border-slate-100 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Tag className="w-4 h-4 text-indigo-600" />
-                      <span className="font-bold text-sm text-slate-900">
-                        {currentBrand?.name || 'Selected Brand'}
-                      </span>
-                      <span className="text-xs text-slate-500">
-                        ({currentBrand?.pod_name || `Pod ${currentBrand?.pod_id}`})
-                      </span>
-                    </div>
-                    <span className="text-xs text-slate-500">
-                      {rosterData.employees?.length || 0} Staff assigned or covering
-                    </span>
-                  </div>
-
-                  <HealthMatrix
-                    dates={rosterData.dates || []}
-                    brandProcesses={rosterData.brandProcesses || []}
-                    employees={rosterData.employees || []}
-                    tempCovers={rosterData.tempCovers || []}
-                    publicHolidays={configData?.holidays || []}
-                  />
-                </div>
-              )}
-
-              {/* Process View Header Info */}
-              {activeView === 'process' && currentProcess && (
-                <div className="bg-white border-b border-slate-200 px-6 py-3">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <Briefcase className="w-4 h-4 text-indigo-600" />
-                      <h2 className="text-sm font-extrabold text-slate-900">
-                        Process: {currentProcess.name}
-                      </h2>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-xs text-slate-500 font-medium">
-                        Brands requiring this process:
-                      </span>
-                      {rosterData.brandProcesses?.map((bp) => (
-                        <span
-                          key={bp.brand_process_id || bp.id}
-                          className="px-2 py-0.5 rounded text-xs font-bold bg-indigo-50 text-indigo-800 border border-indigo-200"
-                        >
-                          {bp.brand_name} (Min: {bp.minimum_staff})
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Grid Views: Company, Pod, Brand, Process */}
-              {activeView !== 'employee' ? (
-                <RosterGrid
-                  dates={rosterData.dates || []}
-                  employees={rosterData.employees || []}
-                  onCellClick={handleCellClick}
-                  publicHolidays={configData?.holidays || []}
-                  groupByPod={activeView === 'company'}
-                />
-              ) : (
-                /* Dedicated Employee View */
-                <EmployeeDetailView
-                  employee={currentEmployee}
-                  dates={rosterData.dates || []}
-                  conflicts={rosterData.validation?.conflicts || []}
-                  onCellClick={handleCellClick}
-                />
-              )}
-            </div>
-          )}
-
-          {/* Interactive Cell Edit Modal */}
-          {editModalData && (
-            <EditCellModal
-              isOpen={Boolean(editModalData)}
-              onClose={handleCloseEditModal}
-              employee={editModalData.employee}
-              cell={editModalData.cell}
-              date={editModalData.date}
-              brandProcesses={configData?.brandProcesses || []}
-              onEntryUpdated={handleDataChanged}
-            />
-          )}
-
-          {/* Live Conflict Slide-Over Drawer */}
-          <ConflictsDrawer
-            isOpen={conflictsDrawerOpen}
-            onClose={() => setConflictsDrawerOpen(false)}
-            conflicts={rosterData?.validation?.conflicts || []}
-            summary={rosterData?.validation?.summary}
-            onConflictResolved={handleDataChanged}
-          />
-        </main>
-      ) : (
-        /* Configuration & Rules Workspace */
-        <ConfigWorkspace
-          configData={configData}
+      {/* 2. Main Workspace Layout */}
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+        {/* Minimal Single-Row Top Header Bar */}
+        <TopHeader
+          activeSection={activeSection}
+          onOpenMobileMenu={() => setIsMobileOpen(true)}
+          pods={configData?.pods || []}
+          selectedPodId={selectedPodId}
+          onPodChange={setSelectedPodId}
+          brands={configData?.brands || []}
+          selectedBrandId={selectedBrandId}
+          onBrandChange={setSelectedBrandId}
+          processes={configData?.processes || []}
+          selectedProcessId={selectedProcessId}
+          onProcessChange={setSelectedProcessId}
+          employees={configData?.employees || []}
+          selectedEmployeeId={selectedEmployeeId}
+          onEmployeeChange={setSelectedEmployeeId}
+          year={year}
+          month={month}
+          onMonthChange={handleMonthChange}
+          onGenerateRoster={handleGenerateRoster}
+          isGenerating={isGenerating}
+          rosterStatus={rosterData?.roster?.status}
+          isPublishable={rosterData?.validation?.isPublishable}
+          onToggleStatus={handleToggleStatus}
+          isStatusUpdating={isStatusUpdating}
+          onToggleConflictsDrawer={() => handleOpenConflictsWithTab('ALL')}
+          criticalConflictsCount={rosterData?.validation?.summary?.criticalCount || 0}
+          warningConflictsCount={rosterData?.validation?.summary?.warningCount || 0}
           onRefreshConfig={fetchConfig}
-          isLoading={isLoadingConfig}
+          isLoadingConfig={isLoadingConfig}
         />
-      )}
+
+        {/* Dynamic Workspace Body */}
+        {isRosterView ? (
+          <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            {/* Low-profile Metric Strip */}
+            <KPIStrip
+              summary={rosterData?.validation?.summary}
+              staffCount={rosterData?.employees?.length || 0}
+              isPublishable={rosterData?.validation?.isPublishable}
+              onOpenConflictsDrawer={handleOpenConflictsWithTab}
+            />
+
+            {/* Roster Grid & View States */}
+            {isLoadingRoster ? (
+              <div className="flex-1 flex flex-col items-center justify-center p-12 text-slate-400 dark:text-slate-500">
+                <Loader2 className="w-7 h-7 text-indigo-600 dark:text-indigo-400 animate-spin mb-2.5" />
+                <p className="text-xs font-medium">Loading roster...</p>
+              </div>
+            ) : !rosterData?.exists ? (
+              <EmptyRosterState
+                year={year}
+                month={month}
+                onGenerate={handleGenerateRoster}
+                isGenerating={isGenerating}
+              />
+            ) : (
+              <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                {/* Pod View Banner Card */}
+                {activeSection === 'pod' && currentPod && (
+                  <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-2.5 flex items-center justify-between shrink-0">
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 dark:bg-indigo-400" />
+                      <div>
+                        <h2 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">
+                          {currentPod.name}
+                        </h2>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                          Pod Lead:{' '}
+                          <strong className="text-indigo-600 dark:text-indigo-400 font-semibold">
+                            {currentPod.pod_lead_name || 'Unassigned'}
+                          </strong>
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                      {rosterData.employees?.length || 0} Members in Pod
+                    </div>
+                  </div>
+                )}
+
+                {/* Brand View Health Matrix */}
+                {activeSection === 'brand' && (
+                  <div className="shrink-0">
+                    <div className="bg-white dark:bg-slate-900 px-6 py-2 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Tag className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                        <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-slate-100">
+                          {currentBrand?.name || 'Selected Brand'}
+                        </span>
+                        <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                          ({currentBrand?.pod_name || `Pod ${currentBrand?.pod_id}`})
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                        {rosterData.employees?.length || 0} Staff assigned or covering
+                      </span>
+                    </div>
+
+                    <HealthMatrix
+                      dates={rosterData.dates || []}
+                      brandProcesses={rosterData.brandProcesses || []}
+                      employees={rosterData.employees || []}
+                      tempCovers={rosterData.tempCovers || []}
+                      publicHolidays={configData?.holidays || []}
+                    />
+                  </div>
+                )}
+
+                {/* Process View Subheader */}
+                {activeSection === 'process' && currentProcess && (
+                  <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-2.5 shrink-0">
+                    <div className="flex flex-wrap items-center justify-between gap-2.5">
+                      <div className="flex items-center gap-2">
+                        <Briefcase className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                        <h2 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">
+                          Process: {currentProcess.name}
+                        </h2>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">
+                          Brands requiring this process:
+                        </span>
+                        {rosterData.brandProcesses?.map((bp) => (
+                          <span
+                            key={bp.brand_process_id || bp.id}
+                            className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-500/30"
+                          >
+                            {bp.brand_name} (Min: {bp.minimum_staff})
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Main Views */}
+                {activeSection !== 'employee' ? (
+                  <RosterGrid
+                    dates={rosterData.dates || []}
+                    employees={rosterData.employees || []}
+                    onCellClick={handleCellClick}
+                    publicHolidays={configData?.holidays || []}
+                    groupByPod={activeSection === 'company'}
+                  />
+                ) : (
+                  <EmployeeDetailView
+                    employee={currentEmployee}
+                    dates={rosterData.dates || []}
+                    conflicts={rosterData.validation?.conflicts || []}
+                    onCellClick={handleCellClick}
+                  />
+                )}
+              </div>
+            )}
+
+            {/* Interactive Cell Edit Modal */}
+            {editModalData && (
+              <EditCellModal
+                isOpen={Boolean(editModalData)}
+                onClose={handleCloseEditModal}
+                employee={editModalData.employee}
+                cell={editModalData.cell}
+                date={editModalData.date}
+                brandProcesses={configData?.brandProcesses || []}
+                onEntryUpdated={handleDataChanged}
+              />
+            )}
+
+            {/* Live Conflict Slide-Over Drawer */}
+            <ConflictsDrawer
+              isOpen={conflictsDrawerOpen}
+              onClose={() => setConflictsDrawerOpen(false)}
+              conflicts={rosterData?.validation?.conflicts || []}
+              summary={rosterData?.validation?.summary}
+              onConflictResolved={handleDataChanged}
+              initialTab={drawerInitialTab}
+            />
+          </main>
+        ) : (
+          /* Configuration Sections */
+          <ConfigWorkspace
+            activeSection={activeSection}
+            configData={configData}
+            onRefreshConfig={fetchConfig}
+          />
+        )}
+      </div>
     </div>
   );
 }
 
 export default function App() {
   return (
-    <ToastProvider>
-      <DashboardApp />
-    </ToastProvider>
+    <ThemeProvider>
+      <ToastProvider>
+        <DashboardApp />
+      </ToastProvider>
+    </ThemeProvider>
   );
 }

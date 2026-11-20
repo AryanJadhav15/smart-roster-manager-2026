@@ -111,13 +111,13 @@ export default function EditCellModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in">
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-150">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
         {/* Modal Header */}
-        <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+        <div className="px-5 py-4 bg-slate-900 dark:bg-slate-950 text-white flex items-center justify-between border-b border-slate-800">
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-extrabold text-base text-white">
+              <span className="font-bold text-base text-white">
                 Edit Roster Entry
               </span>
               <span className="text-xs px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-bold border border-indigo-500/30">
@@ -137,17 +137,17 @@ export default function EditCellModal({
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 space-y-6 overflow-y-auto">
+        <div className="p-5 space-y-5 overflow-y-auto">
           {/* Form 1: Status & Notes */}
           <form onSubmit={handleSaveEntry} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
                 Shift Status
               </label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm font-semibold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               >
                 {STATUS_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -158,15 +158,15 @@ export default function EditCellModal({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
                 Override Notes
               </label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Reason for manual schedule adjustment..."
+                placeholder="Reason for schedule adjustment..."
                 rows={2}
-                className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
 
@@ -174,48 +174,46 @@ export default function EditCellModal({
               <button
                 type="submit"
                 disabled={isSaving}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-sm transition-all disabled:opacity-50"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 text-white rounded-lg text-xs font-bold shadow-2xs transition-all disabled:opacity-50"
               >
                 {isSaving ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 ) : (
-                  <Save className="w-4 h-4" />
+                  <Save className="w-3.5 h-3.5" />
                 )}
-                <span>Save Status Override</span>
+                <span>Save Status</span>
               </button>
             </div>
           </form>
 
           {/* Section 2: Temporary Covers */}
-          <div className="border-t border-slate-200 pt-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                  Temporary Cover (Substitute Shift)
-                </h4>
-                <p className="text-[11px] text-slate-500">
-                  Assign this employee to cover a process for another brand on this date.
-                </p>
-              </div>
+          <div className="border-t border-slate-200 dark:border-slate-800 pt-4 space-y-3.5">
+            <div>
+              <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+                Temporary Cover Assignment
+              </h4>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                Assign this employee to cover a process for another brand on this date.
+              </p>
             </div>
 
             {/* List Existing Covers */}
             {cell.temp_covers && cell.temp_covers.length > 0 ? (
-              <div className="space-y-2">
-                <span className="text-[11px] font-bold text-slate-600">
+              <div className="space-y-1.5">
+                <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400">
                   Active Covers on this Cell:
                 </span>
                 {cell.temp_covers.map((cov) => (
                   <div
                     key={cov.id}
-                    className="flex items-center justify-between p-2.5 rounded-lg bg-purple-50 border border-purple-200 text-xs"
+                    className="flex items-center justify-between p-2.5 rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800/40 text-xs"
                   >
                     <div>
-                      <div className="font-bold text-purple-900">
+                      <div className="font-bold text-purple-900 dark:text-purple-300">
                         {cov.brand_name} • {cov.process_name}
                       </div>
                       {cov.notes && (
-                        <div className="text-[11px] text-purple-700 italic">
+                        <div className="text-[11px] text-purple-700 dark:text-purple-400 italic">
                           "{cov.notes}"
                         </div>
                       )}
@@ -224,13 +222,13 @@ export default function EditCellModal({
                       type="button"
                       onClick={() => handleDeleteCover(cov.id)}
                       disabled={isDeletingCoverId === cov.id}
-                      className="p-1.5 rounded-md text-rose-600 hover:bg-rose-100 hover:text-rose-700 transition-colors"
+                      className="p-1 rounded text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-950/50 transition-colors"
                       title="Remove Temporary Cover"
                     >
                       {isDeletingCoverId === cov.id ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
                       ) : (
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3.5 h-3.5" />
                       )}
                     </button>
                   </div>
@@ -238,14 +236,14 @@ export default function EditCellModal({
               </div>
             ) : null}
 
-            {/* Assign New Cover Form (Allowed when status is WORKING) */}
+            {/* Assign New Cover Form */}
             {status === 'WORKING' ? (
               <form
                 onSubmit={handleAddCover}
-                className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-3"
+                className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/70 space-y-2.5"
               >
-                <div className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                  <Plus className="w-3.5 h-3.5 text-indigo-600" />
+                <div className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <Plus className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                   <span>Assign Additional Brand-Process Cover</span>
                 </div>
 
@@ -253,7 +251,7 @@ export default function EditCellModal({
                   <select
                     value={selectedBpId}
                     onChange={(e) => setSelectedBpId(e.target.value)}
-                    className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md px-2.5 py-1.5 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   >
                     {brandProcesses.map((bp) => (
                       <option
@@ -272,14 +270,14 @@ export default function EditCellModal({
                     value={coverNotes}
                     onChange={(e) => setCoverNotes(e.target.value)}
                     placeholder="Cover reason/notes (optional)..."
-                    className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md px-2.5 py-1.5 text-xs font-medium text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={isAddingCover}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-purple-700 hover:bg-purple-800 text-white rounded-lg text-xs font-bold transition-all disabled:opacity-50"
+                  className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-purple-700 dark:bg-purple-600 hover:bg-purple-800 dark:hover:bg-purple-700 text-white rounded-md text-xs font-bold transition-all disabled:opacity-50"
                 >
                   {isAddingCover ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -290,8 +288,8 @@ export default function EditCellModal({
                 </button>
               </form>
             ) : (
-              <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800 flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
+              <div className="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
                 <span>
                   Employee must have <strong>WORKING</strong> status to provide temporary coverage for other processes.
                 </span>
@@ -301,11 +299,11 @@ export default function EditCellModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end">
+        <div className="px-5 py-3 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex justify-end">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors"
+            className="px-3.5 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
           >
             Close
           </button>
