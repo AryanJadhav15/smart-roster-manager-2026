@@ -2,9 +2,9 @@
 
 A full-stack monthly roster planning, deterministic scheduling, and live conflict-validation platform built for D2C customer experience (CX) and operations agencies managing multiple brands, processes, and operational pods.
 
-- **Live Application:** (https://smart-roster-manager.vercel.app)
-- **Backend API Health Check:** (https://smart-roster-manager-backend.vercel.app/api/health)
-- **Demo Video (3–5 min):** `[Add your demo video link here]`
+- **Live Application:** https://smart-roster-manager.vercel.app
+- **Backend API Health Check:** https://smart-roster-manager-backend.vercel.app/api/health
+- **Demo Video (3–5 min):** https://drive.google.com/file/d/1rCupp6zN5LDCy5txG5zWXlV7xIlOV6Oq/view?usp=sharing
 
 ---
 
